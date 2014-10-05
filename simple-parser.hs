@@ -1,7 +1,7 @@
 import Text.ParserCombinators.Parsec hiding (spaces)
 import System.Environment
 import Control.Monad
-import Numeric (readOct, readHex)
+import Numeric (readOct, readHex, readFloat)
 import Data.Char (digitToInt)
 import Debug.Trace
 
@@ -9,6 +9,7 @@ data LispVal = Atom String
              | List [LispVal]
              | DottedList [LispVal] LispVal
              | Number Integer
+             | Float Double
              | String String
              | Bool Bool deriving (Show)
 
@@ -49,6 +50,13 @@ parseNumber = do
 parseNumber =
   many1 digit >>= (\x -> return . Number $ read x) --}
 
+parseFloat :: Parser LispVal
+parseFloat = do
+  first <- many1 digit
+  pointOrExponent <- oneOf ".eE"
+  rest <- many1 digit
+  return . Float $ case readFloat (first ++ [pointOrExponent] ++ rest) of [(x,"")] -> x
+
 readBin' :: String -> Integer
 readBin' xs = foldl (\v x -> v * 2 + (toInteger $ digitToInt x)) 0 xs
 
@@ -59,7 +67,7 @@ readHex' :: String -> Integer
 readHex' xs = case readHex xs of [(x, "")] -> x
 
 parseExpr :: Parser LispVal
-parseExpr = parseString <|> parseNumber <|> parseAtom
+parseExpr = parseString <|> parseFloat <|> parseNumber <|> parseAtom
 
 spaces :: Parser ()
 spaces = skipMany1 space
@@ -70,7 +78,7 @@ symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
   Left err -> "No match: " ++ show err
-  Right val -> "Found value"
+  Right val -> "Found value: " ++ show val
 
 main :: IO ()
 main = do
