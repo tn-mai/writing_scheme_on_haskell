@@ -65,7 +65,32 @@ parseFloat = do
 
 -- | Expression parser.
 parseExpr :: Parser LispVal
-parseExpr = parseString <|> parseFloat <|> parseNumber <|> parseAtom
+parseExpr = parseAtom
+        <|> parseString
+        <|> parseNumber
+        <|> parseFloat
+        <|> do char '('
+               x <- try parseList <|> parseDottedList
+               char ')'
+               return x
+
+-- | List parser.
+parseList :: Parser LispVal
+parseList = liftM List $ sepBy parseExpr spaces
+
+-- | Dotted List parser.
+parseDottedList :: Parser LispVal
+parseDottedList = do
+  head <- endBy parseExpr spaces
+  tail <- char '.' >> spaces >> parseExpr
+  return $ DottedList head tail
+
+-- | Quote parser.
+parseQuoted :: Parser LispVal
+parseQuoted = do
+  char '\''
+  x <- parseExpr
+  return $ List [Atom "quot", x]
 
 -- | Space parser.
 spaces :: Parser ()
