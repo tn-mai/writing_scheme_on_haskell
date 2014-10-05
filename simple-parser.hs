@@ -1,13 +1,16 @@
 import Text.ParserCombinators.Parsec hiding (spaces)
 import System.Environment
 import Control.Monad
+import Numeric (readOct, readHex)
+import Data.Char (digitToInt)
+import Debug.Trace
 
 data LispVal = Atom String
              | List [LispVal]
              | DottedList [LispVal] LispVal
              | Number Integer
              | String String
-             | Bool Bool
+             | Bool Bool deriving (Show)
 
 parseString :: Parser LispVal
 parseString = do
@@ -27,7 +30,17 @@ parseAtom = do
     _ -> Atom atom
 
 parseNumber :: Parser LispVal
-parseNumber = liftM (Number . read) $ many1 digit
+parseNumber = do
+  first <- char '#' <|> digit
+  second <- oneOf "bodh" <|> digit
+  let prefix = first:second:[]
+  case prefix of
+    "#b" -> liftM (Number . readBin') $ many1 (oneOf "01")
+    "#o" -> liftM (Number . readOct') $ many1 (oneOf "01234567")
+    "#d" -> liftM (Number . read) $ many1 digit
+    "#h" -> liftM (Number . readHex') $ many1 (oneOf "0123456789abcdefABCDEF")
+    _ -> liftM (Number . read . (prefix ++)) $ many1 digit
+
 {-- | 'do' version
 parseNumber = do
   x <- many1 digit
@@ -36,8 +49,17 @@ parseNumber = do
 parseNumber =
   many1 digit >>= (\x -> return . Number $ read x) --}
 
+readBin' :: String -> Integer
+readBin' xs = foldl (\v x -> v * 2 + (toInteger $ digitToInt x)) 0 xs
+
+readOct' :: String -> Integer
+readOct' xs = case readOct xs of [(x, "")] -> x
+
+readHex' :: String -> Integer
+readHex' xs = case readHex xs of [(x, "")] -> x
+
 parseExpr :: Parser LispVal
-parseExpr = parseAtom <|> parseString <|> parseNumber
+parseExpr = parseString <|> parseNumber <|> parseAtom
 
 spaces :: Parser ()
 spaces = skipMany1 space
