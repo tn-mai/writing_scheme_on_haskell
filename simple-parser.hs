@@ -41,6 +41,15 @@ parseNumber = do
     "#d" -> liftM (Number . read) $ many1 digit
     "#h" -> liftM (Number . readHex') $ many1 (oneOf "0123456789abcdefABCDEF")
     _ -> liftM (Number . read . (prefix ++)) $ many1 digit
+  where
+    readBin' :: String -> Integer
+    readBin' xs = foldl (\v x -> v * 2 + (toInteger $ digitToInt x)) 0 xs
+
+    readOct' :: String -> Integer
+    readOct' xs = case readOct xs of [(x, "")] -> x
+
+    readHex' :: String -> Integer
+    readHex' xs = case readHex xs of [(x, "")] -> x
 
 parseFloat :: Parser LispVal
 parseFloat = do
@@ -48,15 +57,6 @@ parseFloat = do
   pointOrExponent <- oneOf ".eE"
   rest <- many1 digit
   return . Float $ case readFloat (first ++ [pointOrExponent] ++ rest) of [(x,"")] -> x
-
-readBin' :: String -> Integer
-readBin' xs = foldl (\v x -> v * 2 + (toInteger $ digitToInt x)) 0 xs
-
-readOct' :: String -> Integer
-readOct' xs = case readOct xs of [(x, "")] -> x
-
-readHex' :: String -> Integer
-readHex' xs = case readHex xs of [(x, "")] -> x
 
 parseExpr :: Parser LispVal
 parseExpr = parseString <|> parseFloat <|> parseNumber <|> parseAtom
