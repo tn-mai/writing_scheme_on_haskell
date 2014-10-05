@@ -12,7 +12,7 @@ data LispVal = Atom String
 parseString :: Parser LispVal
 parseString = do
   char '"'
-  x <- many ((char '\\' >> char '"') <|> noneOf "\"")
+  x <- many ((char '\\' >> oneOf "\"nrt\\") <|> noneOf "\"")
   char '"'
   return $ String x
 
