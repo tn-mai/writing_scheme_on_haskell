@@ -28,6 +28,13 @@ parseAtom = do
 
 parseNumber :: Parser LispVal
 parseNumber = liftM (Number . read) $ many1 digit
+{-- | 'do' version
+parseNumber = do
+  x <- many1 digit
+  return . Number $ read x --}
+{-- 'bind' version
+parseNumber =
+  many1 digit >>= (\x -> return . Number $ read x) --}
 
 parseExpr :: Parser LispVal
 parseExpr = parseAtom <|> parseString <|> parseNumber
