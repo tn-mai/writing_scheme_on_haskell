@@ -86,6 +86,7 @@ parseExpr = parseAtom
         <|> parseString
         <|> parseNumber
         <|> parseFloat
+        <|> parseQuoted
         <|> do char '('
                x <- try parseList <|> parseDottedList
                char ')'
