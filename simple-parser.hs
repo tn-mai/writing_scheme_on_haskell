@@ -42,14 +42,6 @@ parseNumber = do
     "#h" -> liftM (Number . readHex') $ many1 (oneOf "0123456789abcdefABCDEF")
     _ -> liftM (Number . read . (prefix ++)) $ many1 digit
 
-{-- | 'do' version
-parseNumber = do
-  x <- many1 digit
-  return . Number $ read x --}
-{-- 'bind' version
-parseNumber =
-  many1 digit >>= (\x -> return . Number $ read x) --}
-
 parseFloat :: Parser LispVal
 parseFloat = do
   first <- many1 digit
