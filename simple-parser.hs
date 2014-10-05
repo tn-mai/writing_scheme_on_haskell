@@ -5,6 +5,7 @@ import Numeric (readOct, readHex, readFloat)
 import Data.Char (digitToInt)
 import Debug.Trace
 
+-- | Data type list of Scheme.
 data LispVal = Atom String
              | List [LispVal]
              | DottedList [LispVal] LispVal
@@ -13,6 +14,7 @@ data LispVal = Atom String
              | String String
              | Bool Bool deriving (Show)
 
+-- | String parser.
 parseString :: Parser LispVal
 parseString = do
   char '"'
@@ -20,6 +22,7 @@ parseString = do
   char '"'
   return $ String x
 
+-- | Atom parser.
 parseAtom :: Parser LispVal
 parseAtom = do
   first <- letter <|> symbol
@@ -30,6 +33,7 @@ parseAtom = do
     "#f" -> Bool False
     _ -> Atom atom
 
+-- | Numeric parser.
 parseNumber :: Parser LispVal
 parseNumber = do
   first <- char '#' <|> digit
@@ -51,6 +55,7 @@ parseNumber = do
     readHex' :: String -> Integer
     readHex' xs = case readHex xs of [(x, "")] -> x
 
+-- | Floating point parser.
 parseFloat :: Parser LispVal
 parseFloat = do
   first <- many1 digit
@@ -58,12 +63,15 @@ parseFloat = do
   rest <- many1 digit
   return . Float $ case readFloat (first ++ [pointOrExponent] ++ rest) of [(x,"")] -> x
 
+-- | Expression parser.
 parseExpr :: Parser LispVal
 parseExpr = parseString <|> parseFloat <|> parseNumber <|> parseAtom
 
+-- | Space parser.
 spaces :: Parser ()
 spaces = skipMany1 space
 
+-- | Symbol of Scheme parser.
 symbol :: Parser Char
 symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
 
