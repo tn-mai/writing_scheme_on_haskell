@@ -52,16 +52,17 @@ parseAtom = do
 
 -- | Numeric parser.
 parseNumber :: Parser LispVal
-parseNumber = do
-  first <- char '#' <|> digit
-  second <- oneOf "bodh" <|> digit
-  let prefix = first:second:[]
-  case prefix of
-    "#b" -> liftM (Number . readBin') $ many1 (oneOf "01")
-    "#o" -> liftM (Number . readOct') $ many1 (oneOf "01234567")
-    "#d" -> liftM (Number . read) $ many1 digit
-    "#h" -> liftM (Number . readHex') $ many1 (oneOf "0123456789abcdefABCDEF")
-    _ -> liftM (Number . read . (prefix ++)) $ many1 digit
+parseNumber =
+  do { n <- many1 digit
+     ; notFollowedBy (letter <|> digit <|> symbol)
+     ; return . Number $ read n
+     }
+  <|> do { char '#'
+         ;   do { char 'b'; n <- many1 (oneOf "01"); notFollowedBy (letter <|> digit <|> symbol); return . Number $ readBin' n }
+         <|> do { char 'o'; n <- many1 octDigit; notFollowedBy (letter <|> digit <|> symbol); return . Number $ readOct' n }
+         <|> do { char 'd'; n <- many1 digit; notFollowedBy (letter <|> digit <|> symbol); return . Number $ read n }
+         <|> do { char 'h'; n <- many1 hexDigit; notFollowedBy (letter <|> digit <|> symbol); return . Number $ readHex' n }
+         }
   where
     readBin' :: String -> Integer
     readBin' xs = foldl (\v x -> v * 2 + (toInteger $ digitToInt x)) 0 xs
@@ -82,9 +83,9 @@ parseFloat = do
 
 -- | Expression parser.
 parseExpr :: Parser LispVal
-parseExpr = parseAtom
+parseExpr = try parseNumber
+        <|> parseAtom
         <|> parseString
-        <|> parseNumber
         <|> parseFloat
         <|> parseQuoted
         <|> do char '('
