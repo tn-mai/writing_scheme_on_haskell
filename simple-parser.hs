@@ -127,6 +127,8 @@ eval val@(Float _) = val
 eval val@(Bool _) = val
 eval (List [Atom "quote", val]) = val
 eval (List (Atom func : args)) = apply func $ map eval args
+eval val@(List _) = val
+eval val@(Atom _) = val
 eval val = trace "Couldn't evaluate" val
 
 -- | Apply the function to the arguments.
@@ -143,6 +145,14 @@ primitives =
   , ("mod", numericBinop mod)
   , ("quotient", numericBinop quot)
   , ("remainder", numericBinop rem)
+  , ("symbol?", isSymbol)
+  , ("string?", isString)
+  , ("number?", isNumber)
+  , ("boolean?", isBoolean)
+  , ("list?", isList)
+  , ("symbol->string", symbolToString)
+  , ("string->symbol", stringToSymbol)
+  , ("eq?", equal)
   ]
 
 -- | Numeric binary operation helper.
@@ -157,6 +167,39 @@ numericBinop op params = Number $ foldl1 op $ map unpackNum params
             else fst $ parsed !! 0
         unpackNum (List [n]) = unpackNum n
         unpackNum _ = 0
+
+isSymbol :: [LispVal] -> LispVal
+isSymbol [(Atom _)] = Bool True
+isSymbol _ = Bool False
+
+isString :: [LispVal] -> LispVal
+isString [(String _)] = Bool True
+isString _ = Bool False
+
+isNumber :: [LispVal] -> LispVal
+isNumber [(Number _)] = Bool True
+isNumber _ = Bool False
+
+isBoolean :: [LispVal] -> LispVal
+isBoolean [(Bool _)] = Bool True
+isBoolean _ = Bool False
+
+isList :: [LispVal] -> LispVal
+isList [(List _)] = Bool True
+isList _ = Bool False
+
+symbolToString :: [LispVal] -> LispVal
+symbolToString [(Atom n)] = String n
+
+stringToSymbol :: [LispVal] -> LispVal
+stringToSymbol [(String n)] = Atom n
+
+equal :: [LispVal] -> LispVal
+equal ((Atom l) : (Atom r) : []) = Bool $ l == r
+equal ((String l) : (String r) : []) = Bool $ l == r
+equal ((Number l) : (Number r) : []) = Bool $ l == r
+equal ((Float l) : (Float r) : []) = Bool $ l == r
+equal ((Bool l) : (Bool r) : []) = Bool $ l == r
 
 readExpr :: String -> LispVal
 readExpr input = case parse parseExpr "lisp" input of
