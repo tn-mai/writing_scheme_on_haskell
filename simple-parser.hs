@@ -215,6 +215,11 @@ primitives =
   , ("symbol->string", symbolToString)
   , ("string->symbol", stringToSymbol)
   , ("eq?", equal)
+  , ("car", car)
+  , ("cdr", cdr)
+  , ("cons", cons)
+  , ("eq?", eqv)
+  , ("eqv?", eqv)
   ]
 
 unpackNum :: LispVal -> ThrowsError Integer
@@ -287,6 +292,37 @@ equal ((String l) : (String r) : []) = return $ Bool $ l == r
 equal ((Number l) : (Number r) : []) = return $ Bool $ l == r
 equal ((Float l) : (Float r) : []) = return $ Bool $ l == r
 equal ((Bool l) : (Bool r) : []) = return $ Bool $ l == r
+
+car :: [LispVal] -> ThrowsError LispVal
+car [List (x:xs)] = return x
+car [DottedList (x:xs) _] = return x
+car [badArg] = throwError $ TypeMismatch "pair" badArg
+car badArgList = throwError $ NumArgs 1 badArgList
+
+cdr :: [LispVal] -> ThrowsError LispVal
+cdr [List (x:xs)] = return $ List xs
+cdr [DottedList [xs] x] = return x
+cdr [DottedList (_:xs) x] = return $ DottedList xs x
+cdr [badArg] = throwError $ TypeMismatch "pair" badArg
+cdr badArgList = throwError $ NumArgs 1 badArgList
+
+cons :: [LispVal] -> ThrowsError LispVal
+cons [x, List []] = return $ List [x]
+cons [x, List xs] = return . List $ x:xs
+cons [x, DottedList xs xlast] = return $ DottedList (x:xs) xlast
+cons [x1, x2] = return $ DottedList [x1] x2
+cons badArgList = throwError $ NumArgs 2 badArgList
+
+eqv :: [LispVal] -> ThrowsError LispVal
+eqv [(Bool l), (Bool r)] = return . Bool $ l == r
+eqv [(Number l), (Number r)] = return . Bool $ l == r
+eqv [(String l), (String r)] = return . Bool $ l == r
+eqv [(Atom l), (Atom r)] = return . Bool $ l == r
+eqv [(DottedList xs x), (DottedList ys y)] = eqv [List $ xs ++ [x], List $ ys ++ [y]]
+eqv [(List l), (List r)] = return . Bool $ (length l == length r) && (all eqvPair $ zip l r)
+  where eqvPair (x1, x2) = either (\_ -> False) (\(Bool val) -> val) $ eqv [x1, x2]
+eqv [_, _] = return $ Bool False
+eqv badArgList = throwError $ NumArgs 2 badArgList
 
 -- | Read and Parse the input expression.
 readExpr :: String -> ThrowsError LispVal
