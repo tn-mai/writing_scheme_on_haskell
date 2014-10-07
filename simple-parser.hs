@@ -214,7 +214,6 @@ primitives =
   , ("list?", isList)
   , ("symbol->string", symbolToString)
   , ("string->symbol", stringToSymbol)
-  , ("eq?", equal)
   , ("car", car)
   , ("cdr", cdr)
   , ("cons", cons)
@@ -286,13 +285,6 @@ symbolToString [(Atom n)] = return $ String n
 stringToSymbol :: [LispVal] -> ThrowsError LispVal
 stringToSymbol [(String n)] = return $ Atom n
 
-equal :: [LispVal] -> ThrowsError LispVal
-equal ((Atom l) : (Atom r) : []) = return $ Bool $ l == r
-equal ((String l) : (String r) : []) = return $ Bool $ l == r
-equal ((Number l) : (Number r) : []) = return $ Bool $ l == r
-equal ((Float l) : (Float r) : []) = return $ Bool $ l == r
-equal ((Bool l) : (Bool r) : []) = return $ Bool $ l == r
-
 car :: [LispVal] -> ThrowsError LispVal
 car [List (x:xs)] = return x
 car [DottedList (x:xs) _] = return x
@@ -317,6 +309,7 @@ eqv :: [LispVal] -> ThrowsError LispVal
 eqv [(Bool l), (Bool r)] = return . Bool $ l == r
 eqv [(Number l), (Number r)] = return . Bool $ l == r
 eqv [(String l), (String r)] = return . Bool $ l == r
+eqv [(Float l), (Float r)] = return . Bool $ l == r
 eqv [(Atom l), (Atom r)] = return . Bool $ l == r
 eqv [(DottedList xs x), (DottedList ys y)] = eqv [List $ xs ++ [x], List $ ys ++ [y]]
 eqv [(List l), (List r)] = return . Bool $ (length l == length r) && (all eqvPair $ zip l r)
