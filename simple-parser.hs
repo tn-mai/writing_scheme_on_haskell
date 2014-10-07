@@ -195,19 +195,20 @@ primitives =
   , ("eq?", equal)
   ]
 
+unpackNum :: LispVal -> ThrowsError Integer
+unpackNum (Number n) = return n
+unpackNum (String n) =
+  let parsed = reads n in
+    if null parsed
+    then throwError . TypeMismatch "number" $ String n
+    else return . fst $ parsed !! 0
+unpackNum (List [n]) = unpackNum n
+unpackNum notNum = throwError $ TypeMismatch "number" notNum
+
 -- | Numeric binary operation helper.
 numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> ThrowsError LispVal
 numericBinop op singleVal@[_] = throwError $ NumArgs 2 singleVal
 numericBinop op params = mapM unpackNum params >>= return . Number . foldl1 op 
-  where unpackNum :: LispVal -> ThrowsError Integer
-        unpackNum (Number n) = return n
-        unpackNum (String n) =
-          let parsed = reads n in
-            if null parsed
-            then throwError . TypeMismatch "number" $ String n
-            else return . fst $ parsed !! 0
-        unpackNum (List [n]) = unpackNum n
-        unpackNum notNum = throwError $ TypeMismatch "number" notNum
 
 isSymbol :: [LispVal] -> ThrowsError LispVal
 isSymbol [] = throwError $ NumArgs 1 []
