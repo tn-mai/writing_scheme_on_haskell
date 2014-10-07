@@ -239,7 +239,7 @@ numericBinop op singleVal@[_] = throwError $ NumArgs 2 singleVal
 numericBinop op params = mapM unpackNum params >>= return . Number . foldl1 op 
 
 boolBinop :: (LispVal -> ThrowsError a) -> (a -> a -> Bool) -> [LispVal] -> ThrowsError LispVal
-boolBinop unpacker op (l:r:[]) = do
+boolBinop unpacker op [l, r] = do
   left <- unpacker l
   right <- unpacker r
   return . Bool $ left `op` right
