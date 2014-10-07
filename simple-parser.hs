@@ -145,7 +145,7 @@ parseQuoted :: Parser LispVal
 parseQuoted = do
   char '\''
   x <- parseExpr
-  return $ List [Atom "quot", x]
+  return $ List [Atom "quote", x]
 
 -- | Space parser.
 spaces :: Parser ()
