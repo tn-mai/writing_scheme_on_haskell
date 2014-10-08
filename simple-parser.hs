@@ -333,6 +333,8 @@ unpackEquals l r (AnyUnpacker unpacker) =
   `catchError` (const $ return False)
 
 equal :: [LispVal] -> ThrowsError LispVal
+equal [(List l), (List r)] = return . Bool $ (length l == length r) && (all equalPair $ zip l r)
+  where equalPair (x1, x2) = either (\_ -> False) (\(Bool val) -> val) $ equal [x1, x2]
 equal args@[l, r] = do
   primitiveEquals <- liftM or $ mapM (unpackEquals l r) [AnyUnpacker unpackNum, AnyUnpacker unpackStr, AnyUnpacker unpackBool]
   eqvEquals <- eqv args
