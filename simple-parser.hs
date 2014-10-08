@@ -1,3 +1,4 @@
+{-# OPTIONS -XExistentialQuantification #-}
 import Text.ParserCombinators.Parsec hiding (spaces)
 import System.Environment
 import Control.Monad
@@ -219,6 +220,7 @@ primitives =
   , ("cons", cons)
   , ("eq?", eqv)
   , ("eqv?", eqv)
+  , ("equal?" , equal)
   ]
 
 unpackNum :: LispVal -> ThrowsError Integer
@@ -316,6 +318,25 @@ eqv [(List l), (List r)] = return . Bool $ (length l == length r) && (all eqvPai
   where eqvPair (x1, x2) = either (\_ -> False) (\(Bool val) -> val) $ eqv [x1, x2]
 eqv [_, _] = return $ Bool False
 eqv badArgList = throwError $ NumArgs 2 badArgList
+
+{-- | Unpacker type.
+  This definition is using the GHC extension.
+--}
+data Unpacker = forall a. Eq a => AnyUnpacker (LispVal -> ThrowsError a)
+
+unpackEquals :: LispVal -> LispVal -> Unpacker -> ThrowsError Bool
+unpackEquals l r (AnyUnpacker unpacker) =
+  do unpackedL <- unpacker l
+     unpackedR <- unpacker r
+     return $ unpackedL == unpackedR
+  `catchError` (const $ return False)
+
+equal :: [LispVal] -> ThrowsError LispVal
+equal args@[l, r] = do
+  primitiveEquals <- liftM or $ mapM (unpackEquals l r) [AnyUnpacker unpackNum, AnyUnpacker unpackStr, AnyUnpacker unpackBool]
+  eqvEquals <- eqv args
+  return . Bool $ (primitiveEquals || let (Bool x) = eqvEquals in x)
+equal badArgList = throwError $ NumArgs 2 badArgList
 
 -- | Read and Parse the input expression.
 readExpr :: String -> ThrowsError LispVal
