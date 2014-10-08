@@ -222,6 +222,7 @@ primitives =
   , ("eq?", eqv)
   , ("eqv?", eqv)
   , ("equal?" , equal)
+  , ("cond", cond)
   ]
 
 unpackNum :: LispVal -> ThrowsError Integer
@@ -340,6 +341,16 @@ equal args@[l, r] = do
   eqvEquals <- eqv args
   return . Bool $ (primitiveEquals || let (Bool x) = eqvEquals in x)
 equal badArgList = throwError $ NumArgs 2 badArgList
+
+cond :: [LispVal] -> ThrowsError LispVal
+cond [] = return $ Bool False
+-- eval (List [Atom "if", pred, conseq, alt]) = do
+cond ((List (Atom "else":form)):[]) = eval $ List form
+cond ((List (test       :form)):xs) = do
+  result <- eval test
+  case result of
+    Bool False -> cond xs
+    otherwise -> eval $ List form
 
 -- | Read and Parse the input expression.
 readExpr :: String -> ThrowsError LispVal
