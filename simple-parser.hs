@@ -169,6 +169,7 @@ eval (List [Atom "if", pred, conseq, alt]) = do
     Bool False -> eval alt
     Bool True -> eval conseq
     otherwise -> throwError $ TypeMismatch "boolean" pred
+eval (List (Atom "cond": args)) = cond args
 eval (List (Atom func : args)) = mapM eval args >>= apply func
 eval val@(List _) = return val
 eval val@(Atom _) = return val
@@ -222,7 +223,6 @@ primitives =
   , ("eq?", eqv)
   , ("eqv?", eqv)
   , ("equal?" , equal)
-  , ("cond", cond)
   ]
 
 unpackNum :: LispVal -> ThrowsError Integer
@@ -344,9 +344,8 @@ equal badArgList = throwError $ NumArgs 2 badArgList
 
 cond :: [LispVal] -> ThrowsError LispVal
 cond [] = return $ Bool False
--- eval (List [Atom "if", pred, conseq, alt]) = do
-cond ((List (Atom "else":form)):[]) = eval $ List form
-cond ((List (test       :form)):xs) = do
+cond ((List ((Atom "else"):form)):[]) = eval $ List form
+cond ((List (test:form)):xs) = do
   result <- eval test
   case result of
     Bool False -> cond xs
