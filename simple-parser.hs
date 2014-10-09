@@ -170,6 +170,7 @@ eval (List [Atom "if", pred, conseq, alt]) = do
     Bool True -> eval conseq
     otherwise -> throwError $ TypeMismatch "boolean" pred
 eval (List (Atom "cond": args)) = cond args
+eval (List (Atom "case" : args)) = caseFunc args
 eval (List (Atom func : args)) = mapM eval args >>= apply func
 eval val@(List _) = return val
 eval val@(Atom _) = return val
@@ -350,6 +351,32 @@ cond ((List (test:form)):xs) = do
   case result of
     Bool False -> cond xs
     otherwise -> eval $ List form
+
+caseFunc :: [LispVal] -> ThrowsError LispVal
+caseFunc (keyform:xs) = do
+  evaledKeyform <- eval keyform
+  test evaledKeyform xs
+  where
+    test :: LispVal -> [LispVal] -> ThrowsError LispVal
+    test keyform [] = return keyform
+    test keyform ((List (keys:forms)):xs) = do
+      result <- element keyform keys
+      case result of
+        (Bool True) -> last $ map eval forms
+        (Bool False) -> test keyform xs
+
+    -- | Apply eqv to keyform and each keys.
+    --   This function return Bool True if the results contains any Bool True, otherwise Bool False.
+    element :: LispVal -> LispVal -> ThrowsError LispVal
+    element keyform (List keys) = foldl (\v x -> do
+      case v of
+        Left vl -> v
+        Right (Bool vr) -> case x of
+          Left xl -> x
+          Right (Bool xr) -> return . Bool $ vr || xr
+          otherwise -> throwError $ Default "Unknown error"
+      ) (Right $ Bool False) $ map (eqv . (:[keyform])) keys
+    element keyform key = element keyform $ List [key]
 
 -- | Read and Parse the input expression.
 readExpr :: String -> ThrowsError LispVal
