@@ -207,6 +207,7 @@ primitives =
   , ("string>?", strBoolBinop (>))
   , ("string<=?", strBoolBinop (<=))
   , ("string>=?", strBoolBinop (>=))
+  , ("make-string", makeString)
   , ("string-length", stringLength)
   , ("string-ref", stringRef)
 
@@ -264,6 +265,13 @@ boolBinop _ _ args = throwError $ NumArgs 2 args
 numBoolBinop = boolBinop unpackNum
 strBoolBinop = boolBinop unpackStr
 boolBoolBinop = boolBinop unpackBool
+
+makeString :: [LispVal] -> ThrowsError LispVal
+makeString [] = throwError $ NumArgs 1 []
+makeString [Number k] = do return . String $ replicate (fromInteger k) '\0'
+makeString [(Number k), (String c)] = do return . String $ replicate (fromInteger k) (head c)
+makeString [badArg] = throwError $ TypeMismatch "string" badArg
+makeString badArgList = throwError $ NumArgs 1 badArgList
 
 stringLength :: [LispVal] -> ThrowsError LispVal
 stringLength [] = throwError $ NumArgs 1 []
