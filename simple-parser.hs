@@ -207,6 +207,7 @@ primitives =
   , ("string>?", strBoolBinop (>))
   , ("string<=?", strBoolBinop (<=))
   , ("string>=?", strBoolBinop (>=))
+  , ("string-length", stringLength)
 
   , ("mod", numericBinop mod)
   , ("quotient", numericBinop quot)
@@ -262,6 +263,12 @@ boolBinop _ _ args = throwError $ NumArgs 2 args
 numBoolBinop = boolBinop unpackNum
 strBoolBinop = boolBinop unpackStr
 boolBoolBinop = boolBinop unpackBool
+
+stringLength :: [LispVal] -> ThrowsError LispVal
+stringLength [] = throwError $ NumArgs 1 []
+stringLength [String n] = do return . Number . toInteger $ length n
+stringLength [badArg] = throwError $ TypeMismatch "string" badArg
+stringLength badArgList = throwError $ NumArgs 1 badArgList
 
 isSymbol :: [LispVal] -> ThrowsError LispVal
 isSymbol [] = throwError $ NumArgs 1 []
