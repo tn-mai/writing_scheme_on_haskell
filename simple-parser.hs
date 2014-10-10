@@ -59,6 +59,7 @@ instance Error LispError where
 
 type ThrowsError = Either LispError
 
+trapError :: (Show e, MonadError e m) => m String -> m String
 trapError action = catchError action (return . show)
 
 {-- | Get inner value from ThrowsError.
