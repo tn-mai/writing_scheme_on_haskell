@@ -72,9 +72,9 @@ extractValue (Right val) = val
 -- | String parser.
 parseString :: Parser LispVal
 parseString = do
-  char '"'
+  _ <- char '"'
   x <- many ((char '\\' >> oneOf "\"nrt\\") <|> noneOf "\"")
-  char '"'
+  _ <- char '"'
   return $ String x
 
 -- | Atom parser.
@@ -95,11 +95,11 @@ parseNumber =
      ; notFollowedBy (letter <|> digit <|> symbol)
      ; return . Number $ read n
      }
-  <|> do { char '#'
-         ;   do { char 'b'; n <- many1 (oneOf "01"); notFollowedBy (letter <|> digit <|> symbol); return . Number $ readBin' n }
-         <|> do { char 'o'; n <- many1 octDigit; notFollowedBy (letter <|> digit <|> symbol); return . Number $ readOct' n }
-         <|> do { char 'd'; n <- many1 digit; notFollowedBy (letter <|> digit <|> symbol); return . Number $ read n }
-         <|> do { char 'h'; n <- many1 hexDigit; notFollowedBy (letter <|> digit <|> symbol); return . Number $ readHex' n }
+  <|> do { _ <- char '#'
+         ;   do { _ <- char 'b'; n <- many1 (oneOf "01"); notFollowedBy (letter <|> digit <|> symbol); return . Number $ readBin' n }
+         <|> do { _ <- char 'o'; n <- many1 octDigit; notFollowedBy (letter <|> digit <|> symbol); return . Number $ readOct' n }
+         <|> do { _ <- char 'd'; n <- many1 digit; notFollowedBy (letter <|> digit <|> symbol); return . Number $ read n }
+         <|> do { _ <- char 'h'; n <- many1 hexDigit; notFollowedBy (letter <|> digit <|> symbol); return . Number $ readHex' n }
          }
   where
     readBin' :: String -> Integer
@@ -126,9 +126,9 @@ parseExpr = try parseNumber
         <|> parseString
         <|> parseFloat
         <|> parseQuoted
-        <|> do char '('
+        <|> do _ <- char '('
                x <- try parseList <|> parseDottedList
-               char ')'
+               _ <- char ')'
                return x
 
 -- | List parser.
@@ -145,7 +145,7 @@ parseDottedList = do
 -- | Quote parser.
 parseQuoted :: Parser LispVal
 parseQuoted = do
-  char '\''
+  _ <- char '\''
   x <- parseExpr
   return $ List [Atom "quote", x]
 
