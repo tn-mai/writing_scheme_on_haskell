@@ -264,7 +264,7 @@ unpackBool notBool = throwError $ TypeMismatch "boolean" notBool
 
 -- | Numeric binary operation helper.
 numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> ThrowsError LispVal
-numericBinop op singleVal@[_] = throwError $ NumArgs 2 singleVal
+numericBinop _ singleVal@[_] = throwError $ NumArgs 2 singleVal
 numericBinop op params = mapM unpackNum params >>= return . Number . foldl1 op 
 
 boolBinop :: (LispVal -> ThrowsError a) -> (a -> a -> Bool) -> [LispVal] -> ThrowsError LispVal
@@ -340,14 +340,14 @@ stringToSymbol [badArg] = throwError $ TypeMismatch "string" badArg
 stringToSymbol badArgList = throwError $ NumArgs 1 badArgList
 
 car :: [LispVal] -> ThrowsError LispVal
-car [List (x:xs)] = return x
-car [DottedList (x:xs) _] = return x
+car [List (x:_)] = return x
+car [DottedList (x:_) _] = return x
 car [badArg] = throwError $ TypeMismatch "pair" badArg
 car badArgList = throwError $ NumArgs 1 badArgList
 
 cdr :: [LispVal] -> ThrowsError LispVal
-cdr [List (x:xs)] = return $ List xs
-cdr [DottedList [xs] x] = return x
+cdr [List (_:xs)] = return $ List xs
+cdr [DottedList [_] x] = return x
 cdr [DottedList (_:xs) x] = return $ DottedList xs x
 cdr [badArg] = throwError $ TypeMismatch "pair" badArg
 cdr badArgList = throwError $ NumArgs 1 badArgList
@@ -423,9 +423,9 @@ caseFunc (keyform:xs) = do
     element :: LispVal -> LispVal -> ThrowsError LispVal
     element keyform (List keys) = foldl (\v x -> do
       case v of
-        Left vl -> v
+        Left vl -> Left vl
         Right (Bool vr) -> case x of
-          Left xl -> x
+          Left xl -> Left xl
           Right (Bool xr) -> return . Bool $ vr || xr
           _ -> throwError $ Default "Unknown error"
         Right badArg -> throwError $ TypeMismatch "boolean" badArg
