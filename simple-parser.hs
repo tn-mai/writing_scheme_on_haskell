@@ -228,6 +228,7 @@ primitives =
   , ("string->list", stringToList)
   , ("list->string", listToString)
   , ("string-copy", stringCopy)
+  , ("string-fill!", stringFill)
 
   , ("mod", numericBinop mod)
   , ("quotient", numericBinop quot)
@@ -350,6 +351,12 @@ stringCopy :: [LispVal] -> ThrowsError LispVal
 stringCopy [(String s)] = return $ String s
 stringCopy [badArg] = throwError $ TypeMismatch "string" badArg
 stringCopy badArgList = throwError $ NumArgs 1 badArgList
+
+stringFill :: [LispVal] -> ThrowsError LispVal
+stringFill [(String s), (String [k])] = return . String $ replicate (length s) k
+stringFill [(String _), badArg] = throwError $ TypeMismatch "char" badArg
+stringFill [badArg, _] = throwError $ TypeMismatch "string" badArg
+stringFill badArgList = throwError $ NumArgs 2 badArgList
 
 isSymbol :: [LispVal] -> ThrowsError LispVal
 isSymbol [] = throwError $ NumArgs 1 []
