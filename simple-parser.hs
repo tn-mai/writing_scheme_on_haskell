@@ -66,8 +66,9 @@ trapError action = catchError action (return . show)
   This is expected to use after catchError, thus no implement Left version.
   The unhandled error is from Haskell, so we want to fail it as soon as possible.
 --}
-extractValue :: ThrowsError a -> a
+extractValue :: ThrowsError String -> String
 extractValue (Right val) = val
+extractValue (Left err) = show err
 
 -- | String parser.
 parseString :: Parser LispVal
