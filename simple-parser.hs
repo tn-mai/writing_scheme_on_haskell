@@ -3,7 +3,7 @@ import Text.ParserCombinators.Parsec hiding (spaces)
 import System.Environment
 import Control.Monad
 import Numeric (readOct, readHex, readFloat)
-import Data.Char (digitToInt)
+import Data.Char (digitToInt, toUpper)
 import Control.Monad.Error
 import Debug.Trace
 
@@ -207,6 +207,11 @@ primitives =
   , ("string>?", strBoolBinop (>))
   , ("string<=?", strBoolBinop (<=))
   , ("string>=?", strBoolBinop (>=))
+  , ("string-ci=?", strBoolBinopCi (==))
+  , ("string-ci<?", strBoolBinopCi (<))
+  , ("string-ci>?", strBoolBinopCi (>))
+  , ("string-ci<=?", strBoolBinopCi (<=))
+  , ("string-ci>=?", strBoolBinopCi (>=))
   , ("make-string", makeString)
   , ("string-length", stringLength)
   , ("string-ref", stringRef)
@@ -264,6 +269,7 @@ boolBinop _ _ args = throwError $ NumArgs 2 args
 
 numBoolBinop = boolBinop unpackNum
 strBoolBinop = boolBinop unpackStr
+strBoolBinopCi op = boolBinop unpackStr (\l r -> (map toUpper l) `op` (map toUpper l))
 boolBoolBinop = boolBinop unpackBool
 
 makeString :: [LispVal] -> ThrowsError LispVal
