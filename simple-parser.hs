@@ -208,6 +208,7 @@ primitives =
   , ("string<=?", strBoolBinop (<=))
   , ("string>=?", strBoolBinop (>=))
   , ("string-length", stringLength)
+  , ("string-ref", stringRef)
 
   , ("mod", numericBinop mod)
   , ("quotient", numericBinop quot)
@@ -269,6 +270,13 @@ stringLength [] = throwError $ NumArgs 1 []
 stringLength [String n] = do return . Number . toInteger $ length n
 stringLength [badArg] = throwError $ TypeMismatch "string" badArg
 stringLength badArgList = throwError $ NumArgs 1 badArgList
+
+stringRef :: [LispVal] -> ThrowsError LispVal
+stringRef [] = throwError $ NumArgs 2 []
+stringRef [(String n), (Number k)] = do return . String $ [n !! fromInteger k]
+stringRef [(String _), badArg] = throwError $ TypeMismatch "string" badArg
+stringRef [badArg, (Number _)] = throwError $ TypeMismatch "string" badArg
+stringRef badArgList = throwError $ NumArgs 2 badArgList
 
 isSymbol :: [LispVal] -> ThrowsError LispVal
 isSymbol [] = throwError $ NumArgs 1 []
