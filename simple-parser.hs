@@ -403,6 +403,7 @@ cond ((List (test:form)):xs) = do
 cond badArgList = throwError . TypeMismatch "expression" $ head badArgList
 
 caseFunc :: [LispVal] -> ThrowsError LispVal
+caseFunc [] = throwError $ Default "no argument"
 caseFunc (keyform:xs) = do
   evaledKeyform <- eval keyform
   test evaledKeyform xs
