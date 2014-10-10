@@ -175,7 +175,7 @@ eval (List [Atom "if", pred, conseq, alt]) = do
   case result of
     Bool False -> eval alt
     Bool True -> eval conseq
-    otherwise -> throwError $ TypeMismatch "boolean" pred
+    _ -> throwError $ TypeMismatch "boolean" pred
 eval (List (Atom "cond": args)) = cond args
 eval (List (Atom "case" : args)) = caseFunc args
 eval (List (Atom func : args)) = mapM eval args >>= apply func
@@ -399,7 +399,7 @@ cond ((List (test:form)):xs) = do
   result <- eval test
   case result of
     Bool False -> cond xs
-    otherwise -> eval $ List form
+    _ -> eval $ List form
 cond badArgList = throwError . TypeMismatch "expression" $ head badArgList
 
 caseFunc :: [LispVal] -> ThrowsError LispVal
@@ -427,7 +427,7 @@ caseFunc (keyform:xs) = do
         Right (Bool vr) -> case x of
           Left xl -> x
           Right (Bool xr) -> return . Bool $ vr || xr
-          otherwise -> throwError $ Default "Unknown error"
+          _ -> throwError $ Default "Unknown error"
         Right badArg -> throwError $ TypeMismatch "boolean" badArg
       ) (Right $ Bool False) $ map (eqv . (:[keyform])) keys
     element keyform key = element keyform $ List [key]
