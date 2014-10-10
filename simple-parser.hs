@@ -274,9 +274,18 @@ boolBinop unpacker op [l, r] = do
   return . Bool $ left `op` right
 boolBinop _ _ args = throwError $ NumArgs 2 args
 
+type Binop a = (a -> a -> Bool) -> [LispVal] -> ThrowsError LispVal
+
+numBoolBinop :: Binop Integer
 numBoolBinop = boolBinop unpackNum
+
+strBoolBinop :: Binop String
 strBoolBinop = boolBinop unpackStr
+
+strBoolBinopCi :: Binop String
 strBoolBinopCi op = boolBinop unpackStr (\l r -> (map toUpper l) `op` (map toUpper r))
+
+boolBoolBinop :: Binop Bool
 boolBoolBinop = boolBinop unpackBool
 
 makeString :: [LispVal] -> ThrowsError LispVal
