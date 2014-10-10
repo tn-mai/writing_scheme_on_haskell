@@ -144,9 +144,9 @@ parseList = liftM List $ sepBy parseExpr spaces
 -- | Dotted List parser.
 parseDottedList :: Parser LispVal
 parseDottedList = do
-  head <- endBy parseExpr spaces
-  tail <- char '.' >> spaces >> parseExpr
-  return $ DottedList head tail
+  h <- endBy parseExpr spaces
+  t <- char '.' >> spaces >> parseExpr
+  return $ DottedList h t
 
 -- | Quote parser.
 parseQuoted :: Parser LispVal
@@ -170,12 +170,12 @@ eval val@(Number _) = return val
 eval val@(Float _) = return val
 eval val@(Bool _) = return val
 eval (List [Atom "quote", val]) = return val
-eval (List [Atom "if", pred, conseq, alt]) = do
-  result <- eval pred
+eval (List [Atom "if", predicate, conseq, alt]) = do
+  result <- eval predicate
   case result of
     Bool False -> eval alt
     Bool True -> eval conseq
-    _ -> throwError $ TypeMismatch "boolean" pred
+    _ -> throwError $ TypeMismatch "boolean" predicate
 eval (List (Atom "cond": args)) = cond args
 eval (List (Atom "case" : args)) = caseFunc args
 eval (List (Atom func : args)) = mapM eval args >>= apply func
@@ -409,19 +409,19 @@ caseFunc (keyform:xs) = do
   test evaledKeyform xs
   where
     test :: LispVal -> [LispVal] -> ThrowsError LispVal
-    test keyform [] = return keyform
-    test keyform ((List (keys:forms)):xs) = do
-      result <- element keyform keys
+    test evaledKeyform [] = return evaledKeyform
+    test evaledKeyform ((List (keys:forms)):rest) = do
+      result <- element evaledKeyform keys
       case result of
         (Bool True) -> last $ map eval forms
-        (Bool False) -> test keyform xs
+        (Bool False) -> test evaledKeyform rest
         badArg -> throwError $ TypeMismatch "boolean" badArg
     test _ badArgList = throwError . TypeMismatch "datam" $ head badArgList
 
     -- | Apply eqv to keyform and each keys.
     --   This function return Bool True if the results contains any Bool True, otherwise Bool False.
     element :: LispVal -> LispVal -> ThrowsError LispVal
-    element keyform (List keys) = foldl (\v x -> do
+    element evaledKeyform (List keys) = foldl (\v x -> do
       case v of
         Left vl -> Left vl
         Right (Bool vr) -> case x of
@@ -429,8 +429,8 @@ caseFunc (keyform:xs) = do
           Right (Bool xr) -> return . Bool $ vr || xr
           _ -> throwError $ Default "Unknown error"
         Right badArg -> throwError $ TypeMismatch "boolean" badArg
-      ) (Right $ Bool False) $ map (eqv . (:[keyform])) keys
-    element keyform key = element keyform $ List [key]
+      ) (Right $ Bool False) $ map (eqv . (:[evaledKeyform])) keys
+    element evaledKeyform key = element evaledKeyform $ List [key]
 
 -- | Read and Parse the input expression.
 readExpr :: String -> ThrowsError LispVal
