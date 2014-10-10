@@ -106,10 +106,14 @@ parseNumber =
     readBin' xs = foldl (\v x -> v * 2 + (toInteger $ digitToInt x)) 0 xs
 
     readOct' :: String -> Integer
-    readOct' xs = case readOct xs of [(x, "")] -> x
+    readOct' xs = case readOct xs of
+      [(x, "")] -> x
+      _ -> trace ("readOct': Can't convert String to Integer: " ++ xs) 0
 
     readHex' :: String -> Integer
-    readHex' xs = case readHex xs of [(x, "")] -> x
+    readHex' xs = case readHex xs of
+      [(x, "")] -> x
+      _ -> trace ("readHex': Can't convert String to Integer: " ++ xs) 0
 
 -- | Floating point parser.
 parseFloat :: Parser LispVal
@@ -117,7 +121,9 @@ parseFloat = do
   first <- many1 digit
   pointOrExponent <- oneOf ".eE"
   rest <- many1 digit
-  return . Float $ case readFloat (first ++ [pointOrExponent] ++ rest) of [(x,"")] -> x
+  return . Float $ case readFloat (first ++ [pointOrExponent] ++ rest) of
+    [(x,"")] -> x
+    _ -> trace ("parseFloat: Can't parse: " ++ first ++ [pointOrExponent] ++ rest) 0
 
 -- | Expression parser.
 parseExpr :: Parser LispVal
@@ -301,28 +307,37 @@ isSymbol :: [LispVal] -> ThrowsError LispVal
 isSymbol [] = throwError $ NumArgs 1 []
 isSymbol [(Atom _)] = return $ Bool True
 isSymbol [_] = return $ Bool False
+isSymbol badArgList = throwError $ NumArgs 1 badArgList
 
 isString :: [LispVal] -> ThrowsError LispVal
 isString [(String _)] = return $ Bool True
-isString _ = return $ Bool False
+isString [_] = return $ Bool False
+isString badArgList = throwError $ NumArgs 1 badArgList
 
 isNumber :: [LispVal] -> ThrowsError LispVal
 isNumber [(Number _)] = return $ Bool True
-isNumber _ = return $ Bool False
+isNumber [_] = return $ Bool False
+isNumber badArgList = throwError $ NumArgs 1 badArgList
 
 isBoolean :: [LispVal] -> ThrowsError LispVal
 isBoolean [(Bool _)] = return $ Bool True
-isBoolean _ = return $ Bool False
+isBoolean [_] = return $ Bool False
+isBoolean badArgList = throwError $ NumArgs 1 badArgList
 
 isList :: [LispVal] -> ThrowsError LispVal
 isList [(List _)] = return $ Bool True
-isList _ = return $ Bool False
+isList [_] = return $ Bool False
+isList badArgList = throwError $ NumArgs 1 badArgList
 
 symbolToString :: [LispVal] -> ThrowsError LispVal
 symbolToString [(Atom n)] = return $ String n
+symbolToString [badArg] = throwError $ TypeMismatch "symbol" badArg
+symbolToString badArgList = throwError $ NumArgs 1 badArgList
 
 stringToSymbol :: [LispVal] -> ThrowsError LispVal
 stringToSymbol [(String n)] = return $ Atom n
+stringToSymbol [badArg] = throwError $ TypeMismatch "string" badArg
+stringToSymbol badArgList = throwError $ NumArgs 1 badArgList
 
 car :: [LispVal] -> ThrowsError LispVal
 car [List (x:xs)] = return x
@@ -385,6 +400,7 @@ cond ((List (test:form)):xs) = do
   case result of
     Bool False -> cond xs
     otherwise -> eval $ List form
+cond badArgList = throwError . TypeMismatch "expression" $ head badArgList
 
 caseFunc :: [LispVal] -> ThrowsError LispVal
 caseFunc (keyform:xs) = do
@@ -398,6 +414,8 @@ caseFunc (keyform:xs) = do
       case result of
         (Bool True) -> last $ map eval forms
         (Bool False) -> test keyform xs
+        badArg -> throwError $ TypeMismatch "boolean" badArg
+    test _ badArgList = throwError . TypeMismatch "datam" $ head badArgList
 
     -- | Apply eqv to keyform and each keys.
     --   This function return Bool True if the results contains any Bool True, otherwise Bool False.
@@ -409,6 +427,7 @@ caseFunc (keyform:xs) = do
           Left xl -> x
           Right (Bool xr) -> return . Bool $ vr || xr
           otherwise -> throwError $ Default "Unknown error"
+        Right badArg -> throwError $ TypeMismatch "boolean" badArg
       ) (Right $ Bool False) $ map (eqv . (:[keyform])) keys
     element keyform key = element keyform $ List [key]
 
