@@ -223,6 +223,7 @@ primitives =
   , ("make-string", makeString)
   , ("string-length", stringLength)
   , ("string-ref", stringRef)
+  , ("substring", substring)
 
   , ("mod", numericBinop mod)
   , ("quotient", numericBinop quot)
@@ -312,6 +313,13 @@ stringRef [(String n), (Number k)] = do
 stringRef [(String _), badArg] = throwError $ TypeMismatch "string" badArg
 stringRef [badArg, (Number _)] = throwError $ TypeMismatch "string" badArg
 stringRef badArgList = throwError $ NumArgs 2 badArgList
+
+substring :: [LispVal] -> ThrowsError LispVal
+substring [(String str), (Number s), (Number e)] = do return . String . drop (fromInteger s) $ take (fromInteger e) str
+substring [badArg, (Number _), (Number _)] = throwError $ TypeMismatch "string" badArg
+substring [(String _), badArg, (Number _)] = throwError $ TypeMismatch "number" badArg
+substring [(String _), (Number _), badArg] = throwError $ TypeMismatch "number" badArg
+substring badArgList = throwError $ NumArgs 3 badArgList
 
 isSymbol :: [LispVal] -> ThrowsError LispVal
 isSymbol [] = throwError $ NumArgs 1 []
