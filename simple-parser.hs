@@ -276,7 +276,7 @@ boolBinop _ _ args = throwError $ NumArgs 2 args
 
 numBoolBinop = boolBinop unpackNum
 strBoolBinop = boolBinop unpackStr
-strBoolBinopCi op = boolBinop unpackStr (\l r -> (map toUpper l) `op` (map toUpper l))
+strBoolBinopCi op = boolBinop unpackStr (\l r -> (map toUpper l) `op` (map toUpper r))
 boolBoolBinop = boolBinop unpackBool
 
 makeString :: [LispVal] -> ThrowsError LispVal
