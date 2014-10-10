@@ -225,6 +225,8 @@ primitives =
   , ("string-ref", stringRef)
   , ("substring", substring)
   , ("string-append", stringAppend)
+  , ("string->list", stringToList)
+  , ("list->string", listToString)
 
   , ("mod", numericBinop mod)
   , ("quotient", numericBinop quot)
@@ -328,6 +330,20 @@ stringAppend ((String s0):(String s1):xs) = stringAppend $ (String (s0 ++ s1)):x
 stringAppend ((String _):badArg:_)  = throwError $ TypeMismatch "string" badArg
 stringAppend (badArg:_)  = throwError $ TypeMismatch "string" badArg
 stringAppend badArgList = throwError . Default $ "Expected 1 or more args, found " ++ (foldl (\a b -> a ++ " " ++ (show b)) "" badArgList)
+
+stringToList :: [LispVal] -> ThrowsError LispVal
+stringToList [(String s)] = return . List $ map (\c -> String [c]) s
+stringToList [badArg] = throwError $ TypeMismatch "string" badArg
+stringToList badArgList = throwError $ NumArgs 1 badArgList
+
+listToString :: [LispVal] -> ThrowsError LispVal
+listToString [(List xs)] = foldM concatenate (String "") $ reverse xs
+  where
+    concatenate :: LispVal -> LispVal -> ThrowsError LispVal
+    concatenate (String acc) (String [c]) = return . String $ c:acc
+    concatenate _ badArg = throwError $ TypeMismatch "char" badArg
+listToString [badArg] = throwError $ TypeMismatch "list" badArg
+listToString badArgList = throwError $ NumArgs 1 badArgList
 
 isSymbol :: [LispVal] -> ThrowsError LispVal
 isSymbol [] = throwError $ NumArgs 1 []
