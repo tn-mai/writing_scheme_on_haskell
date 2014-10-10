@@ -227,6 +227,7 @@ primitives =
   , ("string-append", stringAppend)
   , ("string->list", stringToList)
   , ("list->string", listToString)
+  , ("string-copy", stringCopy)
 
   , ("mod", numericBinop mod)
   , ("quotient", numericBinop quot)
@@ -344,6 +345,11 @@ listToString [(List xs)] = foldM concatenate (String "") $ reverse xs
     concatenate _ badArg = throwError $ TypeMismatch "char" badArg
 listToString [badArg] = throwError $ TypeMismatch "list" badArg
 listToString badArgList = throwError $ NumArgs 1 badArgList
+
+stringCopy :: [LispVal] -> ThrowsError LispVal
+stringCopy [(String s)] = return $ String s
+stringCopy [badArg] = throwError $ TypeMismatch "string" badArg
+stringCopy badArgList = throwError $ NumArgs 1 badArgList
 
 isSymbol :: [LispVal] -> ThrowsError LispVal
 isSymbol [] = throwError $ NumArgs 1 []
