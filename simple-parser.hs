@@ -224,6 +224,7 @@ primitives =
   , ("string-length", stringLength)
   , ("string-ref", stringRef)
   , ("substring", substring)
+  , ("string-append", stringAppend)
 
   , ("mod", numericBinop mod)
   , ("quotient", numericBinop quot)
@@ -320,6 +321,13 @@ substring [badArg, (Number _), (Number _)] = throwError $ TypeMismatch "string" 
 substring [(String _), badArg, (Number _)] = throwError $ TypeMismatch "number" badArg
 substring [(String _), (Number _), badArg] = throwError $ TypeMismatch "number" badArg
 substring badArgList = throwError $ NumArgs 3 badArgList
+
+stringAppend :: [LispVal] -> ThrowsError LispVal
+stringAppend [(String s)] = do return $ String s
+stringAppend ((String s0):(String s1):xs) = stringAppend $ (String (s0 ++ s1)):xs
+stringAppend ((String _):badArg:_)  = throwError $ TypeMismatch "string" badArg
+stringAppend (badArg:_)  = throwError $ TypeMismatch "string" badArg
+stringAppend badArgList = throwError . Default $ "Expected 1 or more args, found " ++ (foldl (\a b -> a ++ " " ++ (show b)) "" badArgList)
 
 isSymbol :: [LispVal] -> ThrowsError LispVal
 isSymbol [] = throwError $ NumArgs 1 []
