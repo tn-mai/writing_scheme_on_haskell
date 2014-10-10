@@ -273,7 +273,11 @@ stringLength badArgList = throwError $ NumArgs 1 badArgList
 
 stringRef :: [LispVal] -> ThrowsError LispVal
 stringRef [] = throwError $ NumArgs 2 []
-stringRef [(String n), (Number k)] = do return . String $ [n !! fromInteger k]
+stringRef [(String n), (Number k)] = do
+  if k >= 0
+    && k < (toInteger $ length n)
+  then (return . String $ [n !! fromInteger k])
+  else (throwError . UnboundVar "out of range" $ show k)
 stringRef [(String _), badArg] = throwError $ TypeMismatch "string" badArg
 stringRef [badArg, (Number _)] = throwError $ TypeMismatch "string" badArg
 stringRef badArgList = throwError $ NumArgs 2 badArgList
