@@ -5,6 +5,7 @@ import Control.Monad
 import Numeric (readOct, readHex, readFloat)
 import Data.Char (digitToInt, toUpper)
 import Control.Monad.Error
+import System.IO
 import Debug.Trace
 
 -- | Data type list of Scheme.
@@ -493,8 +494,36 @@ readExpr input = case parse parseExpr "lisp" input of
   Left err -> throwError $ Parser err
   Right val -> return val
 
+-- | Flush stdout stream.
+flushStr :: String -> IO ()
+flushStr str = putStr str >> hFlush stdout
+
+-- | Read one line from stdin.
+readPrompt :: String -> IO String
+readPrompt prompt = flushStr prompt >> getLine
+
+-- | Evaluate string.
+evalString :: String -> IO String
+evalString expr = return . extractValue $ trapError (liftM show $ readExpr expr >>= eval)
+
+-- | REPL core.
+until_ :: Monad m => (a -> Bool) -> m a -> (a -> m()) -> m ()
+until_ predicate prompt action = do
+  result <- prompt
+  if predicate result
+  then return ()
+  else action result >> until_ predicate prompt action
+
+evalAndPrint :: String -> IO ()
+evalAndPrint expr = evalString expr >>= putStrLn
+
+runRepl :: IO ()
+runRepl = until_ (== "quit") (readPrompt "Lisp>>> ") evalAndPrint
+
 main :: IO ()
 main = do
   args <- getArgs
-  evaled <- return . liftM show $ readExpr (head args) >>= eval
-  putStrLn . extractValue $ trapError evaled
+  case length args of
+    0 -> runRepl
+    1 -> evalAndPrint $ head args
+    _ -> putStrLn "usage: scheme [argument]"
