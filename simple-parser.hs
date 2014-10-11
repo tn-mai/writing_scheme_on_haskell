@@ -236,8 +236,8 @@ eval env (List [Atom "if", predicate, conseq, alt]) = do
     _ -> throwError $ TypeMismatch "boolean" predicate
 eval env (List [Atom "set!", Atom var, form]) = eval env form >>= setVar env var
 eval env (List [Atom "define", Atom var, form]) = eval env form >>= defineVar env var
--- eval env (List (Atom "cond": args)) = cond args
--- eval env (List (Atom "case" : args)) = caseFunc args
+eval env (List (Atom "cond": args)) = cond env args
+eval env (List (Atom "case" : args)) = caseFunc env args
 eval env (List (Atom func : args)) = mapM (eval env) args >>= liftThrows . apply func
 eval _ val@(List _) = return val
 eval _ badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
@@ -504,37 +504,37 @@ equal args@[l, r] = do
   eqvEquals <- eqv args
   return . Bool $ (primitiveEquals || let (Bool x) = eqvEquals in x)
 equal badArgList = throwError $ NumArgs 2 badArgList
-{--
-cond :: [LispVal] -> ThrowsError LispVal
-cond [] = return $ Bool False
-cond ((List ((Atom "else"):form)):[]) = eval $ List form
-cond ((List (test:form)):xs) = do
-  result <- eval test
-  case result of
-    Bool False -> cond xs
-    _ -> eval $ List form
-cond badArgList = throwError . TypeMismatch "expression" $ head badArgList
 
-caseFunc :: [LispVal] -> ThrowsError LispVal
-caseFunc [] = throwError $ Default "no argument"
-caseFunc (keyform:xs) = do
-  evaledKeyform <- eval keyform
+cond :: Env -> [LispVal] -> IOThrowsError LispVal
+cond _ [] = return $ Bool False
+cond env ((List ((Atom "else"):form)):[]) = eval env $ List form
+cond env ((List (test:form)):xs) = do
+  result <- eval env test
+  case result of
+    Bool False -> cond env xs
+    _ -> eval env $ List form
+cond _ badArgList = throwError . TypeMismatch "expression" $ head badArgList
+
+caseFunc :: Env -> [LispVal] -> IOThrowsError LispVal
+caseFunc _ [] = throwError $ Default "no argument"
+caseFunc env (keyform:xs) = do
+  evaledKeyform <- eval env keyform
   test evaledKeyform xs
   where
-    test :: LispVal -> [LispVal] -> ThrowsError LispVal
+    test :: LispVal -> [LispVal] -> IOThrowsError LispVal
     test evaledKeyform [] = return evaledKeyform
     test evaledKeyform ((List (keys:forms)):rest) = do
       result <- element evaledKeyform keys
       case result of
-        (Bool True) -> last $ map eval forms
+        (Bool True) -> last $ map (eval env) forms
         (Bool False) -> test evaledKeyform rest
         badArg -> throwError $ TypeMismatch "boolean" badArg
     test _ badArgList = throwError . TypeMismatch "datam" $ head badArgList
 
     -- | Apply eqv to keyform and each keys.
     --   This function return Bool True if the results contains any Bool True, otherwise Bool False.
-    element :: LispVal -> LispVal -> ThrowsError LispVal
-    element evaledKeyform (List keys) = foldl (\v x -> do
+    element :: LispVal -> LispVal -> IOThrowsError LispVal
+    element evaledKeyform (List keys) = liftThrows $ foldl (\v x -> do
       case v of
         Left vl -> Left vl
         Right (Bool vr) -> case x of
@@ -544,7 +544,7 @@ caseFunc (keyform:xs) = do
         Right badArg -> throwError $ TypeMismatch "boolean" badArg
       ) (Right $ Bool False) $ map (eqv . (:[evaledKeyform])) keys
     element evaledKeyform key = element evaledKeyform $ List [key]
---}
+
 -- | Read and Parse the input expression.
 readExpr :: String -> ThrowsError LispVal
 readExpr input = case parse parseExpr "lisp" input of
