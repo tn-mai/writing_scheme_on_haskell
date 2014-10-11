@@ -248,19 +248,39 @@ eval env (List [Atom "if", predicate, conseq, alt]) = do
     _ -> throwError $ TypeMismatch "boolean" predicate
 eval env (List [Atom "set!", Atom var, form]) = eval env form >>= setVar env var
 eval env (List [Atom "define", Atom var, form]) = eval env form >>= defineVar env var
+eval env (List (Atom "define" : List (Atom var : params) : body)) = makeNormalFunc env params body >>= defineVar env var
+eval env (List (Atom "define" : DottedList (Atom var : params) varargs : body)) = makeVarargs varargs env params body >>= defineVar env var
+eval env (List (Atom "lambda" : List params : body)) = makeNormalFunc env params body
+eval env (List (Atom "lambda" : DottedList params varargs : body)) = makeVarargs varargs env params body
+eval env (List (Atom "lambda" : varargs@(Atom _) : body)) = makeVarargs varargs env [] body
+eval env (List (function : args)) = do
+  func <- eval env function
+  argVals <- mapM (eval env) args
+  apply func argVals
 eval env (List (Atom "cond": args)) = cond env args
 eval env (List (Atom "case" : args)) = caseFunc env args
-eval env (List (Atom func : args)) = mapM (eval env) args >>= liftThrows . apply func
+-- eval env (List (Atom func : args)) = mapM (eval env) args >>= liftThrows . apply func
 eval _ val@(List _) = return val
 eval _ badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
 -- | Apply the function to the arguments.
-apply :: String -> [LispVal] -> ThrowsError LispVal
-apply func args =
-  maybe
-    (throwError $ NotFunction "Unrecognized primitive function args" func)
-    ($ args)
-    (lookup func primitives)
+apply :: LispVal -> [LispVal] -> IOThrowsError LispVal
+apply (PrimitiveFunc func) args = liftThrows $ func args
+apply (Func params varargs body env) args =
+  if num params /= num args && varargs == Nothing
+  then throwError $ NumArgs (num params) args
+  else (liftIO $ bindVars env $ zip params args) >>= bindVarArgs varargs >>= evalBody
+  where
+    remainingArgs = drop (length params) args
+    num = toInteger . length
+    evalBody env' = liftM last $ mapM (eval env') body
+    bindVarArgs arg env = case arg of
+      Just argName -> liftIO $ bindVars env [(argName, List $ remainingArgs)]
+      Nothing -> return env
+
+makeFunc varargs env params body = return $ Func (map showVal params) varargs body env
+makeNormalFunc = makeFunc Nothing
+makeVarargs = makeFunc . Just . showVal
 
 -- | Primitive list.
 primitives :: [(String, [LispVal] -> ThrowsError LispVal)]
@@ -317,6 +337,13 @@ primitives =
   , ("eqv?", eqv)
   , ("equal?" , equal)
   ]
+
+primitiveBinding :: IO Env
+primitiveBinding = do
+  env <- nullEnv
+  bindVars env $ map makePrimitiveFunc primitives
+  where
+    makePrimitiveFunc (var, func) = (var, PrimitiveFunc func)
 
 unpackNum :: LispVal -> ThrowsError Integer
 unpackNum (Number n) = return n
@@ -587,10 +614,10 @@ evalAndPrint :: Env -> String -> IO ()
 evalAndPrint env expr = evalString env expr >>= putStrLn
 
 runOne :: String -> IO ()
-runOne expr = nullEnv >>= flip evalAndPrint expr
+runOne expr = primitiveBinding >>= flip evalAndPrint expr
 
 runRepl :: IO ()
-runRepl = nullEnv >>= until_ (== "quit") (readPrompt "Lisp>>> ") . evalAndPrint
+runRepl = primitiveBinding >>= until_ (== "quit") (readPrompt "Lisp>>> ") . evalAndPrint
 
 main :: IO ()
 main = do
