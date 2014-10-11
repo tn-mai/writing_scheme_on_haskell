@@ -37,8 +37,8 @@ showVal (DottedList h t) = "(" ++ unwordsList h ++ ", " ++ showVal t ++ ")"
 showVal (PrimitiveFunc _) = "<primitive>"
 showVal (Func { params = args
               , vararg = varargs
-              , body = body
-              , closure = env
+              , body = _
+              , closure = _
               }) = "(lambda (" ++ unwords (map show args) ++ (maybe "" (\arg -> " . " ++ arg) varargs) ++ ") ...)"
 
 unwordsList :: [LispVal] -> String
@@ -342,7 +342,7 @@ unpackBool notBool = throwError $ TypeMismatch "boolean" notBool
 -- | Numeric binary operation helper.
 numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> ThrowsError LispVal
 numericBinop _ singleVal@[_] = throwError $ NumArgs 2 singleVal
-numericBinop op params = mapM unpackNum params >>= return . Number . foldl1 op 
+numericBinop op args = mapM unpackNum args >>= return . Number . foldl1 op 
 
 boolBinop :: (LispVal -> ThrowsError a) -> (a -> a -> Bool) -> [LispVal] -> ThrowsError LispVal
 boolBinop unpacker op [l, r] = do
