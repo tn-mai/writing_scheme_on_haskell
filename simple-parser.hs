@@ -17,6 +17,12 @@ data LispVal = Atom String
              | Float Double
              | String String
              | Bool Bool
+             | PrimitiveFunc ([LispVal] -> ThrowsError LispVal)
+             | Func { params :: [String]
+                    , vararg :: (Maybe String)
+                    , body :: [LispVal]
+                    , closure :: Env
+                    }
 
 -- | Show LispVal content.
 showVal :: LispVal -> String
