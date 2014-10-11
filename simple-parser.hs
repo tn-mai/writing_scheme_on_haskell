@@ -251,6 +251,8 @@ eval env (List [Atom "if", predicate, conseq, alt]) = do
     Bool False -> eval env alt
     Bool True -> eval env conseq
     _ -> throwError $ TypeMismatch "boolean" predicate
+eval env (List (Atom "cond": args)) = cond env args
+eval env (List (Atom "case" : args)) = caseFunc env args
 eval env (List [Atom "set!", Atom var, form]) = eval env form >>= setVar env var
 eval env (List [Atom "define", Atom var, form]) = eval env form >>= defineVar env var
 eval env (List (Atom "define" : List (Atom var : params) : body)) = makeNormalFunc env params body >>= defineVar env var
@@ -262,8 +264,6 @@ eval env (List (function : args)) = do
   func <- eval env function
   argVals <- mapM (eval env) args
   apply func argVals
-eval env (List (Atom "cond": args)) = cond env args
-eval env (List (Atom "case" : args)) = caseFunc env args
 -- eval env (List (Atom func : args)) = mapM (eval env) args >>= liftThrows . apply func
 eval _ val@(List _) = return val
 eval _ badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
