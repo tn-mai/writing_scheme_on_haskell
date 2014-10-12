@@ -284,8 +284,13 @@ apply (Func argParams varargs argBody argEnv) args =
       Nothing -> return env
 apply (IOFunc func) args = func args
 
+makeFunc :: Maybe String -> Env -> [LispVal] -> [LispVal] -> IOThrowsError LispVal
 makeFunc varargs argEnv argParams argBody = return $ Func (map showVal argParams) varargs argBody argEnv
+
+makeNormalFunc :: Env -> [LispVal] -> [LispVal] -> IOThrowsError LispVal
 makeNormalFunc = makeFunc Nothing
+
+makeVarargs :: LispVal -> Env -> [LispVal] -> [LispVal] -> IOThrowsError LispVal
 makeVarargs = makeFunc . Just . showVal
 
 -- | Primitive list.
