@@ -283,6 +283,7 @@ apply (Func argParams varargs argBody argEnv) args =
       Just argName -> liftIO $ bindVars env [(argName, List $ remainingArgs)]
       Nothing -> return env
 apply (IOFunc func) args = func args
+apply badArg _ = throwError $ TypeMismatch "function" badArg
 
 makeFunc :: Maybe String -> Env -> [LispVal] -> [LispVal] -> IOThrowsError LispVal
 makeFunc varargs argEnv argParams argBody = return $ Func (map showVal argParams) varargs argBody argEnv
@@ -610,11 +611,14 @@ caseFunc env (keyform:xs) = do
 {-- IO functions --}
 
 applyProc :: [LispVal] -> IOThrowsError LispVal
+applyProc [] = throwError $ Default "expected one or more args; found not"
 applyProc [func, List args] = apply func args
 applyProc (func : args) = apply func args
 
 makePort :: IOMode -> [LispVal] -> IOThrowsError LispVal
 makePort mode [String filename] = liftM Port $ liftIO $ openFile filename mode
+makePort _ [badArg] = throwError $ TypeMismatch "string" badArg
+makePort _ badArgList = throwError $ NumArgs 1 badArgList
 
 closePort :: [LispVal] -> IOThrowsError LispVal
 closePort [Port port] = liftIO $ hClose port >> (return $ Bool True)
