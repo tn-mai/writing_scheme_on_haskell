@@ -255,11 +255,11 @@ eval env (List (Atom "cond": args)) = cond env args
 eval env (List (Atom "case" : args)) = caseFunc env args
 eval env (List [Atom "set!", Atom var, form]) = eval env form >>= setVar env var
 eval env (List [Atom "define", Atom var, form]) = eval env form >>= defineVar env var
-eval env (List (Atom "define" : List (Atom var : params) : body)) = makeNormalFunc env params body >>= defineVar env var
-eval env (List (Atom "define" : DottedList (Atom var : params) varargs : body)) = makeVarargs varargs env params body >>= defineVar env var
-eval env (List (Atom "lambda" : List params : body)) = makeNormalFunc env params body
-eval env (List (Atom "lambda" : DottedList params varargs : body)) = makeVarargs varargs env params body
-eval env (List (Atom "lambda" : varargs@(Atom _) : body)) = makeVarargs varargs env [] body
+eval env (List (Atom "define" : List (Atom var : argParams) : argBody)) = makeNormalFunc env argParams argBody >>= defineVar env var
+eval env (List (Atom "define" : DottedList (Atom var : argParams) varargs : argBody)) = makeVarargs varargs env argParams argBody >>= defineVar env var
+eval env (List (Atom "lambda" : List argParams : argBody)) = makeNormalFunc env argParams argBody
+eval env (List (Atom "lambda" : DottedList argParams varargs : argBody)) = makeVarargs varargs env argParams argBody
+eval env (List (Atom "lambda" : varargs@(Atom _) : argBody)) = makeVarargs varargs env [] argBody
 eval env (List (function : args)) = do
   func <- eval env function
   argVals <- mapM (eval env) args
@@ -271,20 +271,20 @@ eval _ badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 -- | Apply the function to the arguments.
 apply :: LispVal -> [LispVal] -> IOThrowsError LispVal
 apply (PrimitiveFunc func) args = liftThrows $ func args
-apply (Func params varargs body env) args =
-  if num params /= num args && varargs == Nothing
-  then throwError $ NumArgs (num params) args
-  else (liftIO $ bindVars env $ zip params args) >>= bindVarArgs varargs >>= evalBody
+apply (Func argParams varargs argBody argEnv) args =
+  if num argParams /= num args && varargs == Nothing
+  then throwError $ NumArgs (num argParams) args
+  else (liftIO $ bindVars argEnv $ zip argParams args) >>= bindVarArgs varargs >>= evalBody
   where
-    remainingArgs = drop (length params) args
+    remainingArgs = drop (length argParams) args
     num = toInteger . length
-    evalBody env' = liftM last $ mapM (eval env') body
+    evalBody env = liftM last $ mapM (eval env) argBody
     bindVarArgs arg env = case arg of
       Just argName -> liftIO $ bindVars env [(argName, List $ remainingArgs)]
       Nothing -> return env
 apply (IOFunc func) args = func args
 
-makeFunc varargs env params body = return $ Func (map showVal params) varargs body env
+makeFunc varargs argEnv argParams argBody = return $ Func (map showVal argParams) varargs argBody argEnv
 makeNormalFunc = makeFunc Nothing
 makeVarargs = makeFunc . Just . showVal
 
@@ -359,9 +359,9 @@ ioPrimitives = [ ("apply", applyProc)
 primitiveBinding :: IO Env
 primitiveBinding = do
   env <- nullEnv
-  bindVars env $ map (makeFunc IOFunc) ioPrimitives ++ map (makeFunc PrimitiveFunc) primitives
+  bindVars env $ map (toFunc IOFunc) ioPrimitives ++ map (toFunc PrimitiveFunc) primitives
   where
-    makeFunc ctor (var, func) = (var, ctor func)
+    toFunc ctor (var, func) = (var, ctor func)
 
 unpackNum :: LispVal -> ThrowsError Integer
 unpackNum (Number n) = return n
